@@ -1,5 +1,41 @@
-echo ".env" > .gitignore
+
+echo "# Python" > .gitignore
 echo "__pycache__/" >> .gitignore
 echo "*.pyc" >> .gitignore
+echo "*.pyo" >> .gitignore
+echo "*.pyd" >> .gitignore
+echo ".Python" >> .gitignore
+echo "env/" >> .gitignore
+echo "venv/" >> .gitignore
+echo ".venv/" >> .gitignore
+echo "" >> .gitignore
+
+echo "# Environment variables" >> .gitignore
+echo ".env" >> .gitignore
+echo ".env.local" >> .gitignore
+echo ".env*.local" >> .gitignore
+echo "" >> .gitignore
+
+echo "# Cloudflare/NGROK" >> .gitignore
+echo "tunnel-creds.json" >> .gitignore
+echo "cert.pem" >> .gitignore
+echo "config.yml" >> .gitignore
+echo "ngrok.exe" >> .gitignore
+echo "cloudflared.exe" >> .gitignore
+echo "" >> .gitignore
+
+echo "# System" >> .gitignore
+echo ".DS_Store" >> .gitignore
+echo "Thumbs.db" >> .gitignore
+echo "" >> .gitignore
+
+echo "# IDE" >> .gitignore
 echo ".vscode/" >> .gitignore
+echo ".idea/" >> .gitignore
+echo "*.swp" >> .gitignore
+echo "*.swo" >> .gitignore
+echo "" >> .gitignore
+
+echo "# Logs" >> .gitignore
 echo "*.log" >> .gitignore
+echo "logs/" >> .gitignore
