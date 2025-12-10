@@ -13,6 +13,7 @@ from telegram.helpers import escape_markdown
 from telegram.error import BadRequest
 import telegram
 import stripe
+from stripe import InvalidRequestError, AuthenticationError, CardError
 import threading
 import asyncio
 import os
@@ -39,15 +40,65 @@ import sys
 
 
 
-    
-   
-    
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
-STRIPE_PUBLIC_KEY = os.getenv("STRIPE_PUBLIC_KEY")
-STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
-ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
+def carregar_env_servidor():
+    """Carrega variáveis do arquivo .env no servidor PythonAnywhere"""
+    env_path = '/home/gplan25/.env'
+    if os.path.exists(env_path):
+        print(f"📁 Carregando .env do servidor: {env_path}")
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip()
+        return True
+    return False
 
+# Tenta carregar do .env do servidor SE estiver no PythonAnywhere
+if 'PYTHONANYWHERE_DOMAIN' in os.environ:
+    carregar_env_servidor()
+
+IS_PYTHONANYWHERE = 'PYTHONANYWHERE_DOMAIN' in os.environ
+
+print(f"🌍 Ambiente: {'PythonAnywhere' if IS_PYTHONANYWHERE else 'Desenvolvimento Local'}")
+
+# ==================== CARREGAR CONFIGURAÇÕES ====================
+
+if IS_PYTHONANYWHERE:
+    print("✅ Executando no PythonAnywhere")
+    # No PythonAnywhere, usamos variáveis de ambiente configuradas no painel
+    TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+    STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+    STRIPE_PUBLIC_KEY = os.getenv("STRIPE_PUBLIC_KEY")
+    STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+    ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
+    
+    # WEBHOOK - necessário no PythonAnywhere
+    PYTHONANYWHERE_USERNAME = os.getenv("PYTHONANYWHERE_USERNAME")
+    if PYTHONANYWHERE_USERNAME:
+        WEBHOOK_URL = f"https://{PYTHONANYWHERE_USERNAME}.pythonanywhere.com/webhook"
+    else:
+        WEBHOOK_URL = None
+        print("⚠️ AVISO: PYTHONANYWHERE_USERNAME não configurado")
+    
+else:
+    print("✅ Executando localmente")
+    # Desenvolvimento local - usa .env
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+        print("✅ Arquivo .env carregado")
+    except ImportError:
+        print("❌ python-dotenv não instalado. Execute: pip install python-dotenv")
+        sys.exit(1)
+    
+    TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+    STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+    STRIPE_PUBLIC_KEY = os.getenv("STRIPE_PUBLIC_KEY")
+    STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+    ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
+    
+    WEBHOOK_URL = None  # Local usa polling
 
 # ==================== VERIFICAÇÃO DE SEGURANÇA ====================
 
@@ -94,6 +145,91 @@ def verificar_seguranca():
 
 
     
+# ==================== VALIDAÇÃO DAS VARIÁVEIS ====================
+
+def validar_configuracoes():
+    """Validar se todas as configurações necessárias estão presentes"""
+    print("\n" + "="*60)
+    print("📋 VALIDAÇÃO DE CONFIGURAÇÕES")
+    print("="*60)
+    
+    configs = {
+        "TELEGRAM_TOKEN": TELEGRAM_TOKEN,
+        "STRIPE_SECRET_KEY": STRIPE_SECRET_KEY,
+        "STRIPE_PUBLIC_KEY": STRIPE_PUBLIC_KEY,
+        "STRIPE_WEBHOOK_SECRET": STRIPE_WEBHOOK_SECRET,
+        "ADMIN_CHAT_ID": ADMIN_CHAT_ID
+    }
+    
+    todas_ok = True
+    
+    for nome, valor in configs.items():
+        if valor:
+            # Ocultar parte da chave por segurança
+            if "TOKEN" in nome or "SECRET" in nome or "KEY" in nome:
+                display_val = f"{valor[:10]}...{valor[-10:]}" if len(valor) > 20 else "***"
+            else:
+                display_val = valor
+                
+            print(f"✅ {nome}: {display_val}")
+        else:
+            print(f"❌ {nome}: NÃO CONFIGURADO")
+            todas_ok = False
+    
+    print("="*60)
+    
+    if not todas_ok:
+        print("\n🚨 CONFIGURAÇÃO INCOMPLETA")
+        if IS_PYTHONANYWHERE:
+            print("   No PythonAnywhere, configure as variáveis em:")
+            print("   Web tab → Environment variables")
+        else:
+            print("   Localmente, crie um arquivo .env com as variáveis")
+        
+        # Sugerir arquivo .env de exemplo
+        print("\n📄 Exemplo de arquivo .env:")
+        print("="*40)
+        print("TELEGRAM_TOKEN=sua_chave_aqui")
+        print("STRIPE_SECRET_KEY=sua_chave_stripe_secreta")
+        print("STRIPE_PUBLIC_KEY=sua_chave_stripe_publica")
+        print("STRIPE_WEBHOOK_SECRET=seu_webhook_secret")
+        if IS_PYTHONANYWHERE:
+            print("PYTHONANYWHERE_USERNAME=seu_usuario")
+        print("="*40)
+    
+    return todas_ok
+
+# ==================== INICIALIZAÇÃO ====================
+
+# Verificar segurança primeiro
+if not verificar_seguranca():
+    print("\n❌ CORRIJA AS CHAVES HARCODED ANTES DE CONTINUAR!")
+    print("   REMOVA as linhas com TELEGRAM_TOKEN = \"...\" etc.")
+    sys.exit(1)
+
+# Validar configurações
+if not validar_configuracoes():
+    print("\n⚠️  Configure as variáveis de ambiente antes de executar")
+    if not IS_PYTHONANYWHERE:
+        # Criar arquivo .env de exemplo se não existir
+        if not os.path.exists('.env'):
+            try:
+                with open('.env.example', 'w') as f:
+                    f.write("""# TELEGRAM BOT
+TELEGRAM_TOKEN=sua_chave_aqui
+
+# STRIPE
+STRIPE_SECRET_KEY=sua_chave_stripe_secreta
+STRIPE_PUBLIC_KEY=sua_chave_stripe_publica
+STRIPE_WEBHOOK_SECRET=seu_webhook_secret
+
+# ADMIN
+""")
+                print("📄 Arquivo .env.example criado. Renomeie para .env e adicione suas chaves")
+            except:
+                pass
+    sys.exit(1)
+
 # ==================== CONFIGURAR STRIPE ====================
 
 if STRIPE_SECRET_KEY:
@@ -113,7 +249,7 @@ print("="*60)
 
 
 
-application = Application.builder().token(TELEGRAM_TOKEN).build()
+application = Application.builder().token(TELEGRAM_TOKEN).pool_timeout(30).build()
 
 stripe.api_key = STRIPE_SECRET_KEY
 bot = Bot(token=TELEGRAM_TOKEN)
@@ -22101,8 +22237,4 @@ if __name__ == "__main__":
         threading.Thread(target=run_flask, daemon=True).start()
     
     # Executar bot principal
-
     main()        
-
-
-
