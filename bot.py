@@ -13,7 +13,6 @@ from telegram.helpers import escape_markdown
 from telegram.error import BadRequest
 import telegram
 import stripe
-from stripe.error import StripeError
 import threading
 import asyncio
 import os
@@ -22104,3 +22103,4 @@ if __name__ == "__main__":
     # Executar bot principal
 
     main()        
+
