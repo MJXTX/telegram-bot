@@ -13,7 +13,7 @@ from telegram.helpers import escape_markdown
 from telegram.error import BadRequest
 import telegram
 import stripe
-from stripe import InvalidRequestError, AuthenticationError, CardError
+from stripe.error import StripeError
 import threading
 import asyncio
 import os
@@ -22102,4 +22102,5 @@ if __name__ == "__main__":
         threading.Thread(target=run_flask, daemon=True).start()
     
     # Executar bot principal
+
     main()        
