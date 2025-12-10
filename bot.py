@@ -113,7 +113,7 @@ print("="*60)
 
 
 
-application = Application.builder().token(TELEGRAM_TOKEN).pool_timeout(30).build()
+application = Application.builder().token(TELEGRAM_TOKEN).build()
 
 stripe.api_key = STRIPE_SECRET_KEY
 bot = Bot(token=TELEGRAM_TOKEN)
@@ -22103,5 +22103,6 @@ if __name__ == "__main__":
     # Executar bot principal
 
     main()        
+
 
 
