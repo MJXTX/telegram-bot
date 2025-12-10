@@ -63,7 +63,14 @@ IS_PYTHONANYWHERE = 'PYTHONANYWHERE_DOMAIN' in os.environ
 print(f"🌍 Ambiente: {'PythonAnywhere' if IS_PYTHONANYWHERE else 'Desenvolvimento Local'}")
 
 # ==================== CARREGAR CONFIGURAÇÕES ====================
+from dotenv import load_dotenv
 
+# Carrega do .env local (desenvolvimento)
+load_dotenv()
+
+# Lê variáveis (funciona local e no Koyeb)
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 if IS_PYTHONANYWHERE:
     print("✅ Executando no PythonAnywhere")
     # No PythonAnywhere, usamos variáveis de ambiente configuradas no painel
@@ -22238,3 +22245,4 @@ if __name__ == "__main__":
     
     # Executar bot principal
     main()        
+
